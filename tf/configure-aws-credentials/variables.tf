@@ -1,9 +1,3 @@
-variable "aws_account_id" {
-  description = "AWS Account ID"
-  type        = string
-  sensitive   = true
-}
-
 variable "github_repo" {
   description = "GitHub repository in format owner/repo"
   type        = string
