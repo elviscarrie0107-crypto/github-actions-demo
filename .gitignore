@@ -1,1 +1,10 @@
 **/__pycache__/**
+*.xml
+.coverage
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
