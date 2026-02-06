@@ -28,7 +28,10 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           },
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_repo}:*",
+              "repo:${var.github_repo}:environment:*"
+            ]
           }
         }
       }
@@ -37,7 +40,7 @@ resource "aws_iam_role" "github_actions" {
 }
 
 resource "aws_iam_role_policy" "github_actions_policy" {
-  name = "github-actions-sts-policy"
+  name = "github-actions-policy"
   role = aws_iam_role.github_actions.id
 
   policy = jsonencode({
@@ -45,7 +48,11 @@ resource "aws_iam_role_policy" "github_actions_policy" {
     Statement = [
       {
         Effect = "Allow"
-        Action = "sts:GetCallerIdentity"
+        Action = [
+          "sts:GetCallerIdentity",
+          "iam:*",
+          "s3:*"
+        ]
         Resource = "*"
       }
     ]
