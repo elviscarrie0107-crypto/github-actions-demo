@@ -54,7 +54,7 @@ jobs:
           cd tf/configure-aws-credentials
           terraform plan
         env:
-          TF_VAR_github_repo: ${{ secrets.GITHUB_REPO }}
+          TF_VAR_github_repo: ${{ secrets.REPO_NAME }}
 
       - name: Terraform Apply
         run: |
@@ -62,4 +62,4 @@ jobs:
           terraform apply -auto-approve
           echo "✅ Deployment completed for ${{ github.event.inputs.environment }}"
         env:
-          TF_VAR_github_repo: ${{ secrets.GITHUB_REPO }}
+          TF_VAR_github_repo: ${{ secrets.REPO_NAME }}
