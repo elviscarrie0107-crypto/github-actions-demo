@@ -1,5 +1,5 @@
-bucket = "kaivoice-terraform-state-dev"
-key = "kaivoice/eks/terraform.tfstate"
+bucket = "github-test-terraform-state-dev"
+key = "test/eks/terraform.tfstate"
 region = "ap-southeast-1"
 encrypt = true
-dynamodb_table = "kaivoice-terraform-lock-dev"
+dynamodb_table = "github-test-terraform-lock-dev"

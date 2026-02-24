@@ -1,15 +1,25 @@
-# resource "aws_iam_openid_connect_provider" "github_actions" {
-#   url = "https://token.actions.githubusercontent.com"
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
+  }
+  
+  backend "s3" {
+    bucket = "github-test-terraform-state-dev"
+    key = "test/eks/terraform.tfstate"
+    region = "ap-southeast-1"
+    encrypt = true
+    dynamodb_table = "github-test-terraform-lock-dev"
+  }
+}
 
-#   client_id_list = [
-#     "sts.amazonaws.com"
-#   ]
-
-#   thumbprint_list = [
-#     "6938fd4d98bab03faadb97b34396831e3780aea1",
-#     "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
-#   ]
-# }
 data "aws_iam_openid_connect_provider" "github_token" {
   arn = "arn:aws:iam::706133530470:oidc-provider/token.actions.githubusercontent.com"
 }
