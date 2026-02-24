@@ -6,5 +6,5 @@ variable "github_repo" {
 variable "role_name" {
   description = "IAM role name"
   type        = string
-  default     = "github-actions-demo-role2"
+  default     = "github-actions-demo-role3"
 }
