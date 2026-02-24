@@ -17,6 +17,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
     permissions:
       id-token: write
       contents: read
@@ -54,22 +56,66 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "Account ID: $ACCOUNT_ID"
 
+      # - name: Write terraform.tfvars for environment
+      #   run: |
+      #     cat << 'EOF' > tf/configure-aws-credentials/environments/$ENVIRONMENT/terraform.tfvars
+      #     ${{ secrets.TFVARS }}
+      #     EOF
+
+      - name: Check Terraform Backend Infra
+        run: |
+          # Check if backend infrastructure exists
+          echo "🔍 Checking S3 backend infrastructure..."
+          BUCKET_NAME="github-test-terraform-state-$ENVIRONMENT"
+          TABLE_NAME="github-test-terraform-lock-$ENVIRONMENT"
+
+          if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+              echo "⚠️  S3 backend bucket not found: $BUCKET_NAME"
+              echo "🔧 Creating S3 bucket..."
+              aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" --create-bucket-configuration LocationConstraint="$AWS_REGION"
+              aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" --versioning-configuration Status=Enabled
+              aws s3api put-bucket-encryption --bucket "$BUCKET_NAME" --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+              aws s3api put-bucket-policy --bucket "$BUCKET_NAME" --policy '{"Version":"2012-10-17","Statement":[{"Sid":"DenyInsecureTransport","Effect":"Deny","Principal":"*","Action":"s3:*","Resource":["arn:aws:s3:::'"$BUCKET_NAME"'","arn:aws:s3:::'"$BUCKET_NAME"'/*"],"Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}'
+              echo "✅ S3 bucket created: $BUCKET_NAME"
+          fi
+
+          if ! aws dynamodb describe-table --table-name "$TABLE_NAME" --region "$AWS_REGION" 2>/dev/null; then
+              echo "⚠️  DynamoDB state lock table not found: $TABLE_NAME"
+              echo "🔧 Creating DynamoDB table..."
+              aws dynamodb create-table \
+                  --table-name "$TABLE_NAME" \
+                  --attribute-definitions AttributeName=LockID,AttributeType=S \
+                  --key-schema AttributeName=LockID,KeyType=HASH \
+                  --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+                  --region "$AWS_REGION"
+              echo "⏳ Waiting for DynamoDB table to be active..."
+              aws dynamodb wait table-exists --table-name "$TABLE_NAME" --region "$AWS_REGION"
+              echo "✅ DynamoDB table created: $TABLE_NAME"
+          fi
+
+          echo "✅ S3 backend infrastructure verified"
+
       - name: Terraform Init
         run: |
           cd tf/configure-aws-credentials
-          terraform init
+          echo "🔧 Initializing Terraform with S3 backend..."
+          terraform init -backend-configs="environments/$ENVIRONMENT/backend.tf"
+
+      - name: Validate Terraform Configuration
+        run: |
+          # Validate Terraform configuration
+          echo "🔍 Validating Terraform configuration..."
+          terraform validate
 
       - name: Terraform Plan
         run: |
           cd tf/configure-aws-credentials
-          terraform plan
+          terraform plan -out="$ENVIRONMENT.tfplan"
         env:
           TF_VAR_github_repo: ${{ secrets.REPO_NAME }}
 
       - name: Terraform Apply
         run: |
           cd tf/configure-aws-credentials
-          terraform apply -auto-approve
+          terraform apply -auto-approve "$ENVIRONMENT.tfplan"
           echo "✅ Deployment completed for ${{ github.event.inputs.environment }}"
-        env:
-          TF_VAR_github_repo: ${{ secrets.REPO_NAME }}
