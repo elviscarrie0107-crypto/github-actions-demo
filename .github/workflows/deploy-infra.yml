@@ -99,7 +99,7 @@ jobs:
         run: |
           cd tf/configure-aws-credentials
           echo "🔧 Initializing Terraform with S3 backend..."
-          terraform init -backend-configs="environments/$ENVIRONMENT/backend.tf"
+          terraform init -backend-config="environments/$ENVIRONMENT/backend.tf"
 
       - name: Validate Terraform Configuration
         run: |
